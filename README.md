@@ -39,3 +39,7 @@ as in this particular case the certificate is self-signed.
   * `kafka-setup.sh` - is run by the `kafka-provisioner` container, it sets up the clusterID, generates the certificates and the `kafka-storage` to use `scram`
   * `update-run.sh` - sets the `CLUSTER_ID` environmental variable before running the cluster
 * For more information about the setup please see the `docker-compose.yaml` file.
+
+# Kubernetes
+* Consider using https://letsencrypt.org/ for certificates 
+* https://cert-manager.io/ for certificate management
