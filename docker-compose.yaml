@@ -1,0 +1,112 @@
+---
+x-kafka-env: &kafka-env
+  KAFKA_NODE_ID: 1
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:SASL_SSL,SSL:SASL_SSL,LOCAL:SASL_SSL"
+  KAFKA_ADVERTISED_LISTENERS: "SSL://kafka:29092,LOCAL://127.0.0.1:29091"
+  KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka:9092"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 100
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+  KAFKA_PROCESS_ROLES: "broker,controller"
+  KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+  KAFKA_LISTENERS: "LOCAL://0.0.0.0:29091,SSL://0.0.0.0:29092,CONTROLLER://kafka:29093"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "SSL"
+  KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+  KAFKA_SSL_KEYSTORE_FILENAME: keystore.jks
+  KAFKA_SSL_KEYSTORE_CREDENTIALS: keystore-pass
+  KAFKA_SSL_KEY_CREDENTIALS: keystore-pass
+  KAFKA_SSL_TRUSTSTORE_FILENAME: truststore.jks
+  KAFKA_SSL_TRUSTSTORE_CREDENTIALS: truststore-pass
+  KAFKA_SSL_CLIENT_AUTH: required
+  KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+  KAFKA_LOCAL_KEYSTORE_FILENAME: keystore.jks
+  KAFKA_LOCAL_KEYSTORE_CREDENTIALS: keystore-pass
+  KAFKA_LOCAL_KEY_CREDENTIALS: keystore-pass
+  KAFKA_LOCAL_TRUSTSTORE_FILENAME: truststore.jks
+  KAFKA_LOCAL_TRUSTSTORE_CREDENTIALS: truststore-pass
+  KAFKA_LOCAL_CLIENT_AUTH: required
+  KAFKA_LOCAL_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+  KAFKA_CONTROLLER_KEYSTORE_FILENAME: keystore.jks
+  KAFKA_CONTROLLER_KEYSTORE_CREDENTIALS: keystore-pass
+  KAFKA_CONTROLLER_KEY_CREDENTIALS: keystore-pass
+  KAFKA_CONTROLLER_TRUSTSTORE_FILENAME: truststore.jks
+  KAFKA_CONTROLLER_TRUSTSTORE_CREDENTIALS: truststore-pass
+  KAFKA_CONTROLLER_CLIENT_AUTH: required
+  KAFKA_CONTROLLER_ENDPOINT_IDENTIFICATION_ALGORITHM: https
+
+  KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  KAFKA_SSL_ENABLED_MECHANISMS: SASL_SSL
+  KAFKA_LOCAL_ENABLED_MECHANISMS: SASL_SSL
+  KAFKA_CONTROLLER_ENABLED_MECHANISMS: SASL_SSL
+
+  KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: SCRAM-SHA-512
+  KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+  KAFKA_LISTENER_NAME_CONTROLLER_SASL_ENABLED_MECHANISMS: PLAIN
+  KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG:
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    username="controller" password="controller" user_controller="controller";
+
+  KAFKA_LISTENER_NAME_SSL_SASL_ENABLED_MECHANISMS: SCRAM-SHA-512
+  KAFKA_LISTENER_NAME_SSL_SCRAM-SHA-512_SASL_JAAS_CONFIG:
+    org.apache.kafka.common.security.scram.ScramLoginModule required
+    username="root" password="rootpassword";
+
+  KAFKA_LISTENER_NAME_LOCAL_SASL_ENABLED_MECHANISMS: SCRAM-SHA-512
+  KAFKA_LISTENER_NAME_LOCAL_SCRAM-SHA-512_SASL_JAAS_CONFIG:
+    org.apache.kafka.common.security.scram.ScramLoginModule required
+    username="root" password="rootpassword";
+
+  KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+  KAFKA_SUPER_USERS: "User:root;User:controller;"
+  KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: false
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+services:
+  kafka-provisioner:
+    platform: linux/amd64
+    hostname: kafka-provisioner
+    image: docker.io/confluentinc/cp-kafka:7.7.1
+    volumes:
+      - kafka-data:/var/lib/kafka/data:rw
+      - kafka-secrets:/etc/kafka/secrets:rw
+      - ./clusterID:/tmp/clusterID:rw
+      - ./scripts/kafka-setup.sh:/tmp/kafka-setup.sh
+    command: "bash -c '/tmp/kafka-setup.sh'"
+    environment:
+      <<: *kafka-env
+  kafka:
+    platform: linux/amd64
+    hostname: kafka
+    image: docker.io/confluentinc/cp-kafka:7.7.1
+    volumes:
+      - kafka-data:/var/lib/kafka/data:rw
+      - kafka-secrets:/etc/kafka/secrets:ro
+      - ./clusterID:/tmp/clusterID:ro
+      - ./scripts/update-run.sh:/tmp/update-run.sh
+    environment:
+      <<: *kafka-env
+    command: "bash -c '/tmp/update-run.sh && /etc/confluent/docker/run'"
+    networks:
+      - private
+    ports:
+      - 127.0.0.1:29091:29091/tcp
+    healthcheck:
+      test:
+        - "CMD"
+        - "kafka-cluster"
+        - "cluster-id"
+        - "--bootstrap-server"
+        - "kafka:29092"
+        - "--config"
+        - "/etc/kafka/secrets/client.properties"
+    depends_on:
+      kafka-provisioner:
+        condition: service_completed_successfully
+networks:
+  private: {}
+
+volumes:
+  kafka-data: {}
+  kafka-secrets: {}
