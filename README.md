@@ -1,4 +1,4 @@
-# kafka-kraft-docker-example
+# kafka-kraft-docker-example (sasl-ssl) 
 Kafka Kraft Cluster using (sasl-ssl) 
 
 # Using the `cp-kafka:7.7.1` image 
@@ -19,7 +19,7 @@ Kafka Kraft Cluster using (sasl-ssl)
 * Install [ruby](https://www.ruby-lang.org/en/documentation/installation/) (for examples) 
 * Install [python](https://www.python.org/downloads/) (for examples)
 
-## Running the example
+## Running the examples
 * Start the kafka cluster:
   * `docker-compose up --build --force-recreate`
 * Once the cluster is running, copy the `ca.pem` file to the `example` directory so that the producer and consumer can use it
