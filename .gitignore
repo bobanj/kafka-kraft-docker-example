@@ -1,0 +1,7 @@
+# Cluster ID directory
+clusterID
+example/ca.pem
+**/Gemfile.lock
+
+# IDE
+.idea

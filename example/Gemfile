@@ -1,0 +1,4 @@
+source 'https://gems.xing.com'
+
+gem 'byebug'
+gem 'rdkafka'
